@@ -1,25 +1,76 @@
-from dotenv import load_dotenv
-from google import genai
+
+# main.py
+
 import os
 
-# Step 1: Load API key from .env
-load_dotenv()
+from dotenv import load_dotenv
 
-# Step 2: Read Gemini API key
-api_key = os.getenv("GEMINI_API_KEY")
-
-if not api_key:
- raise ValueError("Gemini API key not found!")
-
-# Step 3: Initialize Gemini client
-client = genai.Client(api_key=api_key)
-
-# Step 4: Make first LLM call
-response = client.models.generate_content(
- model="gemini-3.5-flash-lite",
- contents="What is Artificial Intelligence? Explain in simple words."
+from llm_client import (
+    GeminiProvider,
+    OllamaProvider,
+    LLMClient
 )
 
-# Step 5: Display response
-print("\nLLM Response:")
-print(response.text)
+from mongo_logger import MongoLogger
+
+
+# Load environment variables
+load_dotenv(override=True)
+
+
+print("================================")
+print("     WEEK 3: LLM MONITORING")
+print("================================")
+
+print("1. Gemini")
+print("2. Ollama")
+
+choice = input("\nSelect provider (1/2): ").strip()
+
+logger = None
+
+try:
+
+    # Connect to MongoDB
+    logger = MongoLogger()
+
+    # Select AI provider
+    if choice == "1":
+
+        api_key = os.getenv("GEMINI_API_KEY")
+
+        if not api_key:
+            raise ValueError("Gemini API key not found in .env")
+
+        provider = GeminiProvider(api_key)
+
+    elif choice == "2":
+
+        provider = OllamaProvider("llama3.2")
+
+    else:
+
+        raise ValueError("Invalid selection. Choose 1 or 2.")
+
+    # Create common client
+    client = LLMClient(provider, logger)
+
+    # Get user prompt
+    prompt = input("\nEnter your question: ")
+
+    # Generate response
+    answer = client.generate(prompt)
+
+    print("\n========== AI RESPONSE ==========")
+    print(answer)
+
+    print("\n========== COMPLETED ==========")
+
+except Exception as error:
+
+    print("\nApplication error:", error)
+
+finally:
+
+    if logger is not None:
+        logger.close()
